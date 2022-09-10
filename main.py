@@ -1,5 +1,7 @@
 import sys
 from PyQt5 import QtWidgets, QtGui, QtCore
+import os
+import json
 
 header_font = QtGui.QFont("OpenSans", 28)
 button_font = QtGui.QFont("OpenSans", 16)
@@ -7,6 +9,8 @@ button_font = QtGui.QFont("OpenSans", 16)
 class MainWindow(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
+        self.wordData = dict()
+        self.loadWords()
 
         self.windowSize = (600, 800)
         self.setWindowTitle("Your Dictionary")
@@ -57,6 +61,20 @@ class MainWindow(QtWidgets.QWidget):
 
         self.setLayout(self.mainHLayout)
 
+    def loadWords(self):
+        if not os.path.exists("data"):
+            os.mkdir("data")
+        if not os.path.exists("data/words.json"):
+            f = open("data/words.json", "w")
+            f.write("{}")
+            f.close()
+        with open("data/words.json") as f:
+            self.wordData = json.load(f)
+
+    def saveWords(self):
+        with open("data/words.json", 'w') as f:
+            json.dump(self.wordData, f)
+
 
     def center(self):
         qr = self.frameGeometry()
@@ -69,6 +87,7 @@ def main():
     app = QtWidgets.QApplication(sys.argv)
     window = MainWindow()
     exit_code = app.exec_()
+    window.saveWords()
     sys.exit(exit_code)
 
 if __name__ == '__main__':
