@@ -2,7 +2,9 @@ import os
 import shutil
 
 class Word:
-    def __init__(self, word: str, imagePath: str = None, definitions: list = None, exampleSentences: list = None):
+    def __init__(self, word: str = None, imagePath: str = None, definitions: list = None, exampleSentences: list = None):
+        if not word:
+            return
         self.word = word
 
         self.imagePath = imagePath
@@ -21,7 +23,17 @@ class Word:
 
         self.fileExtension = self.imagePath.split('.')[-1]
         self.newImagePath = f'data/{self.word}.{self.fileExtension}'
-        shutil.copy2(self.imagePath, self.newImagePath)
+        if self.imagePath != self.newImagePath:
+            shutil.copy2(self.imagePath, self.newImagePath)
 
     def getAsDictionary(self):
         return {'imageExists': self.imageExists,'definitions': self.definitions, 'exampleSentences': self.exampleSentences, 'fileExtension': self.fileExtension}
+
+    def loadFromDict(self, wordName: str, dct: dict):
+        self.word = wordName
+        self.imageExists = dct['imageExists']
+        self.definitions = dct['definitions']
+        self.exampleSentences = dct['exampleSentences']
+        self.fileExtension = dct['fileExtension']
+        if self.imageExists:
+            self.imagePath = f'data/{self.word}.{self.fileExtension}'
