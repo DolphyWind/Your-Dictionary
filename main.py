@@ -3,12 +3,13 @@ from PyQt5 import QtWidgets, QtGui, QtCore
 import os
 import json
 from enum import Enum
-
+import random
 import word
-from word import Word
 
 header_font = QtGui.QFont("OpenSans", 28)
+wordTitle_font = QtGui.QFont("OpenSans", 22)
 button_font = QtGui.QFont("OpenSans", 16)
+text_font = QtGui.QFont("OpenSans", 16)
 inapp_font = QtGui.QFont("OpenSans", 12)
 
 class Menu(Enum):
@@ -32,7 +33,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setGeometry(0, 0, self.windowSize[0], self.windowSize[1])
         self.center()
 
-        self.previousMenu = Menu.MAIN_MENU
+        self.menuList = [Menu.MAIN_MENU]
+        self.previousMenu = None
         self.currentMenu = Menu.MAIN_MENU
         self.switchMenu(Menu.MAIN_MENU)
 
@@ -43,9 +45,20 @@ class MainWindow(QtWidgets.QMainWindow):
         return word
 
     def switchMenu(self, menu: Menu, wordData: word.Word = None):
-        if menu != self.currentMenu:
-            self.previousMenu = self.currentMenu
-            self.currentMenu = menu
+
+        if menu == Menu.PLAY_GAME:
+            return
+
+        if menu == self.previousMenu:
+            self.menuList.pop(-1)
+
+        if menu != self.menuList[-1]:
+            self.menuList.append(menu)
+        try:
+            self.previousMenu = self.menuList[-2]
+        except:
+            self.previousMenu = None
+        self.currentMenu = self.menuList[-1]
 
         self.central = QtWidgets.QWidget(self)
         self.setCentralWidget(self.central)
@@ -56,6 +69,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.createAddWordMenu(wordData)
         elif menu == Menu.SEARCH_WORD:
             self.createSearchWordMenu()
+        elif menu == Menu.SURF_WORDS:
+            self.createSurfWordsMenu(wordData)
         else:
             self.central.setLayout(self.mainMenu_HLayout)
 
@@ -280,7 +295,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.addWord_BackButton = QtWidgets.QPushButton("Back")
         self.addWord_BackButton.setFont(inapp_font)
-        self.addWord_BackButton.clicked.connect(lambda: self.switchMenu(self.previousMenu))
+        self.addWord_BackButton.clicked.connect(lambda: self.switchMenu(self.previousMenu, preloadedWord))
 
         def addWord():
             wordName = self.addWord_WordLineEdit.text()
@@ -311,7 +326,7 @@ class MainWindow(QtWidgets.QMainWindow):
             w = word.Word(wordName, self.currentFilename, definitionsList, sentenceList)
             self.wordData[wordName] = w.getAsDictionary()
 
-            self.saveWords()
+            self.saveWordData()
             self.switchMenu(Menu.ADD_WORD)
 
         self.addWord_SaveButton.clicked.connect(addWord)
@@ -382,9 +397,32 @@ class MainWindow(QtWidgets.QMainWindow):
 
             self.switchMenu(Menu.ADD_WORD, selectedWord)
 
+        def openSelected():
+            selectedItem = self.searchWord_ListWidget.selectedItems()
+            if not selectedItem:
+                return
+            selectedWordStr = selectedItem[0].text()
+            selectedWord = word.Word()
+            selectedWord.loadFromDict(selectedWordStr, self.wordData[selectedWordStr])
+
+            self.switchMenu(Menu.SURF_WORDS, selectedWord)
+
+        def removeSelected():
+            selectedItem = self.searchWord_ListWidget.selectedItems()
+            if not selectedItem:
+                return
+            selectedWordStr = selectedItem[0].text()
+
+            reply = QtWidgets.QMessageBox.question(self, "Are you sure?", f"Do you really Want to remove {selectedWordStr} from your dictionary?",
+                                                 QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+            if reply == QtWidgets.QMessageBox.Yes:
+                self.wordData.pop(selectedWordStr)
+                self.switchMenu(Menu.SEARCH_WORD)
+
+
         self.searchWord_BackButton = QtWidgets.QPushButton("Back")
         self.searchWord_BackButton.setFont(inapp_font)
-        self.searchWord_BackButton.clicked.connect(lambda: self.switchMenu(Menu.MAIN_MENU))
+        self.searchWord_BackButton.clicked.connect(lambda: self.switchMenu(self.previousMenu))
 
         self.searchWord_EditButton = QtWidgets.QPushButton("Edit selected")
         self.searchWord_EditButton.setFont(inapp_font)
@@ -392,6 +430,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.searchWord_OpenButton = QtWidgets.QPushButton("Open Selected")
         self.searchWord_OpenButton.setFont(inapp_font)
+        self.searchWord_OpenButton.clicked.connect(openSelected)
+
+        self.searchWord_RemoveButton = QtWidgets.QPushButton("Remove Selected")
+        self.searchWord_RemoveButton.setFont(inapp_font)
+        self.searchWord_RemoveButton.clicked.connect(removeSelected)
 
         self.searchWord_ButtonHLayout = QtWidgets.QHBoxLayout()
         self.searchWord_ButtonHLayout.addWidget(self.searchWord_BackButton)
@@ -399,6 +442,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.searchWord_ButtonHLayout.addWidget(self.searchWord_EditButton)
         self.searchWord_ButtonHLayout.addStretch()
         self.searchWord_ButtonHLayout.addWidget(self.searchWord_OpenButton)
+        self.searchWord_ButtonHLayout.addStretch()
+        self.searchWord_ButtonHLayout.addWidget(self.searchWord_RemoveButton)
 
         # endregion
 
@@ -421,6 +466,219 @@ class MainWindow(QtWidgets.QMainWindow):
         self.central.setLayout(self.searchWord_MainHLayout)
         # endregion
 
+    def createSurfWordsMenu(self, currentWord:word.Word = None):
+
+        # region Initialize
+        if currentWord is None:
+            currentWord = word.Word()
+            keys_list = list(self.wordData.keys())
+            randomWord = keys_list[0]
+            currentWord.loadFromDict(randomWord, self.wordData[randomWord])
+
+        index = 0
+        for i in range(len(self.wordData.keys())):
+            if list(self.wordData.keys())[i] == currentWord.word:
+                index = i
+        # endregion
+
+        # region Image and Title
+        self.surfWords_ImageLabel = None
+
+        if currentWord.imageExists:
+            self.surfWords_ImageLabel = QtWidgets.QLabel()
+            pixmap = QtGui.QPixmap(currentWord.imagePath)
+            ratio = pixmap.height() / pixmap.width()
+            max_wh = 100
+
+            new_width, new_height = 0, 0
+            if ratio > 1:
+                new_width = max_wh
+                new_height = int(max_wh / ratio)
+            else:
+                new_width = int(max_wh * ratio)
+                new_height = max_wh
+
+            pixmap = pixmap.scaledToWidth(new_width)
+            pixmap = pixmap.scaledToHeight(new_height)
+
+            self.surfWords_ImageLabel.setPixmap(pixmap)
+
+        self.surfWords_TitleLabel = QtWidgets.QLabel(currentWord.word)
+        self.surfWords_TitleLabel.setFont(wordTitle_font)
+
+        self.surfWords_TitleHLayout = QtWidgets.QHBoxLayout()
+        self.surfWords_TitleHLayout.addStretch()
+        if self.surfWords_ImageLabel is not None:
+            self.surfWords_TitleHLayout.addWidget(self.surfWords_ImageLabel)
+        self.surfWords_TitleHLayout.addWidget(self.surfWords_TitleLabel)
+        self.surfWords_TitleHLayout.addStretch()
+        # endregion
+
+        # region Definitions
+        self.surfWords_DefinitionsLabel = QtWidgets.QLabel("Definitions")
+        self.surfWords_DefinitionsLabel.setStyleSheet("color: #5c5a5a")
+        self.surfWords_DefinitionsLabel.setFont(text_font)
+
+        self.surfWords_DefinitionsScrollArea = QtWidgets.QScrollArea()
+        self.surfWords_DefinitionsScrollArea.setMaximumHeight(200)
+        self.surfWords_DefinitionsScrollArea.setMinimumWidth(500)
+        self.surfWords_DefinitionsCenteral = QtWidgets.QWidget()
+        self.surfWords_DefinitionsScrollAreaVLayout = QtWidgets.QVBoxLayout()
+
+        for i, d in enumerate(currentWord.definitions):
+            lbl = QtWidgets.QLabel(f'{i + 1}. {d}')
+            lbl.setFont(text_font)
+            self.surfWords_DefinitionsScrollAreaVLayout.addWidget(lbl)
+
+        self.surfWords_DefinitionsCenteral.setLayout(self.surfWords_DefinitionsScrollAreaVLayout)
+        self.surfWords_DefinitionsScrollArea.setWidget(self.surfWords_DefinitionsCenteral)
+
+        self.surfWords_DefinitionsVLayout = QtWidgets.QVBoxLayout()
+        self.surfWords_DefinitionsVLayout.addWidget(self.surfWords_DefinitionsLabel)
+        self.surfWords_DefinitionsVLayout.addWidget(self.surfWords_DefinitionsScrollArea)
+
+        # endregion
+
+        # region Example Sentences
+        self.surfWords_SentencesLabel = QtWidgets.QLabel("Example Sentences")
+        self.surfWords_SentencesLabel.setStyleSheet("color: #5c5a5a")
+        self.surfWords_SentencesLabel.setFont(text_font)
+
+        self.surfWords_SentencesScrollArea = QtWidgets.QScrollArea()
+        self.surfWords_SentencesScrollArea.setMaximumHeight(150)
+        self.surfWords_SentencesScrollArea.setMinimumWidth(500)
+
+        self.surfWords_SentencesCenteral = QtWidgets.QWidget()
+        self.surfWords_SentencesScrollAreaVLayout = QtWidgets.QVBoxLayout()
+
+        for i, es in enumerate(currentWord.exampleSentences):
+            lbl = QtWidgets.QLabel(f'{i + 1}. {es}')
+            lbl.setFont(text_font)
+            self.surfWords_SentencesScrollAreaVLayout.addWidget(lbl)
+
+        self.surfWords_SentencesCenteral.setLayout(self.surfWords_SentencesScrollAreaVLayout)
+        self.surfWords_SentencesScrollArea.setWidget(self.surfWords_SentencesCenteral)
+
+        self.surfWords_SentencesVLayout = QtWidgets.QVBoxLayout()
+        self.surfWords_SentencesVLayout.addWidget(self.surfWords_SentencesLabel)
+        self.surfWords_SentencesVLayout.addWidget(self.surfWords_SentencesScrollArea)
+
+        self.emptyObject = QtWidgets.QWidget()
+        self.emptyObject.setMinimumHeight(self.surfWords_SentencesScrollArea.height())
+        self.emptyObject.setMaximumHeight(150)
+        self.emptyObject.setMinimumWidth(500)
+
+        # endregion
+
+        # region Buttons
+
+        def changeWord(index, step):
+            index += step
+            if index < 0:
+                index = len(self.wordData.keys()) - 1
+            elif index > len(self.wordData.keys()) - 1:
+                index = 0
+            key_list = list(self.wordData.keys())
+            currentStr = key_list[index]
+            currentWord.loadFromDict(currentStr, self.wordData[currentStr])
+            self.switchMenu(Menu.SURF_WORDS, currentWord)
+
+        def getRandomWord():
+            new_word = word.Word()
+            keys_list = list(self.wordData.keys())
+            randomWord = random.choice(keys_list)
+            while randomWord == currentWord.word:
+                randomWord = random.choice(keys_list)
+            new_word.loadFromDict(randomWord, self.wordData[randomWord])
+            self.switchMenu(self.currentMenu, new_word)
+
+        def removeSelected():
+            selectedWordStr = currentWord.word
+
+            reply = QtWidgets.QMessageBox.question(self, "Are you sure?", f"Do you really Want to remove {selectedWordStr} from your dictionary?",
+                                                 QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+            if reply == QtWidgets.QMessageBox.Yes:
+                self.wordData.pop(selectedWordStr)
+                self.switchMenu(self.previousMenu)
+
+        button_width = 120
+
+        self.surfWords_PreviousButton = QtWidgets.QPushButton("<< Previous")
+        self.surfWords_PreviousButton.setFont(inapp_font)
+        self.surfWords_PreviousButton.setMinimumWidth(button_width)
+        self.surfWords_PreviousButton.clicked.connect(lambda: changeWord(index, -1))
+
+        self.surfWords_NextButton = QtWidgets.QPushButton("Next >>")
+        self.surfWords_NextButton.setFont(inapp_font)
+        self.surfWords_NextButton.setMinimumWidth(button_width)
+        self.surfWords_NextButton.clicked.connect(lambda: changeWord(index, 1))
+
+        self.surfWords_BackButton = QtWidgets.QPushButton("Back")
+        self.surfWords_BackButton.setFont(inapp_font)
+        self.surfWords_BackButton.setMinimumWidth(button_width)
+        self.surfWords_BackButton.clicked.connect(lambda: self.switchMenu(self.previousMenu, currentWord))
+
+        self.surfWords_GetRandomButton = QtWidgets.QPushButton("Get Random")
+        self.surfWords_GetRandomButton.setFont(inapp_font)
+        self.surfWords_GetRandomButton.setMinimumWidth(button_width)
+        self.surfWords_GetRandomButton.clicked.connect(getRandomWord)
+
+        self.surfWords_FirstVLayout = QtWidgets.QVBoxLayout()
+        self.surfWords_FirstVLayout.addWidget(self.surfWords_GetRandomButton)
+        self.surfWords_FirstVLayout.addWidget(self.surfWords_BackButton)
+
+        self.surfWords_EditButton = QtWidgets.QPushButton("Edit")
+        self.surfWords_EditButton.setFont(inapp_font)
+        self.surfWords_EditButton.setMinimumWidth(button_width)
+        self.surfWords_EditButton.clicked.connect(lambda: self.switchMenu(Menu.ADD_WORD, currentWord))
+
+        self.surfWords_RemoveButton = QtWidgets.QPushButton("Remove")
+        self.surfWords_RemoveButton.setFont(inapp_font)
+        self.surfWords_RemoveButton.setMinimumWidth(button_width)
+        self.surfWords_RemoveButton.clicked.connect(removeSelected)
+
+        self.surfWords_SecondVLayout = QtWidgets.QVBoxLayout()
+        self.surfWords_SecondVLayout.addWidget(self.surfWords_EditButton)
+        self.surfWords_SecondVLayout.addWidget(self.surfWords_RemoveButton)
+
+        self.surfWords_ButtonHLayout = QtWidgets.QHBoxLayout()
+        self.surfWords_ButtonHLayout.addStretch()
+        self.surfWords_ButtonHLayout.addWidget(self.surfWords_PreviousButton)
+        self.surfWords_ButtonHLayout.addStretch()
+        self.surfWords_ButtonHLayout.addLayout(self.surfWords_FirstVLayout)
+        self.surfWords_ButtonHLayout.addStretch()
+        self.surfWords_ButtonHLayout.addLayout(self.surfWords_SecondVLayout)
+        self.surfWords_ButtonHLayout.addStretch()
+        self.surfWords_ButtonHLayout.addWidget(self.surfWords_NextButton)
+        self.surfWords_ButtonHLayout.addStretch()
+
+        # endregion
+
+        # region Main Layouts
+        self.surfWords_MainVLayout = QtWidgets.QVBoxLayout()
+
+        self.surfWords_MainVLayout.addStretch()
+        self.surfWords_MainVLayout.addLayout(self.surfWords_TitleHLayout)
+        self.surfWords_MainVLayout.addStretch()
+        self.surfWords_MainVLayout.addLayout(self.surfWords_DefinitionsVLayout)
+        if len(currentWord.exampleSentences) != 0:
+            self.surfWords_MainVLayout.addStretch()
+            self.surfWords_MainVLayout.addLayout(self.surfWords_SentencesVLayout)
+        else:
+            self.surfWords_MainVLayout.addStretch()
+            self.surfWords_MainVLayout.addWidget(self.emptyObject)
+        self.surfWords_MainVLayout.addStretch()
+        self.surfWords_MainVLayout.addLayout(self.surfWords_ButtonHLayout)
+        self.surfWords_MainVLayout.addStretch()
+
+        self.surfWords_MainHLayout = QtWidgets.QHBoxLayout()
+        self.surfWords_MainHLayout.addStretch()
+        self.surfWords_MainHLayout.addLayout(self.surfWords_MainVLayout)
+        self.surfWords_MainHLayout.addStretch()
+
+        self.central.setLayout(self.surfWords_MainHLayout)
+        # endregion
+
     def loadWords(self):
         if not os.path.exists("data"):
             os.mkdir("data")
@@ -431,7 +689,7 @@ class MainWindow(QtWidgets.QMainWindow):
         with open("data/words.json") as f:
             self.wordData = json.load(f)
 
-    def saveWords(self):
+    def saveWordData(self):
         with open("data/words.json", 'w') as f:
             json.dump(self.wordData, f)
 
@@ -447,7 +705,7 @@ def main():
     app = QtWidgets.QApplication(sys.argv)
     window = MainWindow()
     exit_code = app.exec_()
-    window.saveWords()
+    window.saveWordData()
     sys.exit(exit_code)
 
 if __name__ == '__main__':
