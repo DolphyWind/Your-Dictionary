@@ -503,8 +503,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 new_width = int(max_wh * ratio)
                 new_height = max_wh
 
-            pixmap = pixmap.scaledToWidth(new_width)
-            pixmap = pixmap.scaledToHeight(new_height)
+            pixmap = pixmap.scaledToWidth(new_width, QtCore.Qt.SmoothTransformation)
+            pixmap = pixmap.scaledToHeight(new_height, QtCore.Qt.SmoothTransformation)
 
             self.surfWords_ImageLabel.setPixmap(pixmap)
 
@@ -592,7 +592,7 @@ class MainWindow(QtWidgets.QMainWindow):
             new_word = word.Word()
             keys_list = list(self.wordData.keys())
             if len(keys_list) <= 1:
-                return 
+                return
             randomWord = random.choice(keys_list)
             while randomWord == currentWord.word:
                 randomWord = random.choice(keys_list)
