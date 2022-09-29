@@ -49,6 +49,11 @@ class MainWindow(QtWidgets.QMainWindow):
         if menu == Menu.PLAY_GAME:
             return
 
+        if menu == Menu.SURF_WORDS:
+            if len(self.wordData) == 0:
+                QtWidgets.QMessageBox.warning(self, 'Error!', 'You Have to add some words to your dictionary!', QtWidgets.QMessageBox.Ok)
+                return
+
         if menu == self.previousMenu:
             self.menuList.pop(-1)
 
@@ -586,6 +591,8 @@ class MainWindow(QtWidgets.QMainWindow):
         def getRandomWord():
             new_word = word.Word()
             keys_list = list(self.wordData.keys())
+            if len(keys_list) <= 1:
+                return 
             randomWord = random.choice(keys_list)
             while randomWord == currentWord.word:
                 randomWord = random.choice(keys_list)
