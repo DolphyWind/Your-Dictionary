@@ -135,18 +135,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def createAddWordMenu(self, preloadedWord:word.Word = None):
         # region Word Typing
-        self.addWord_WordLabel = QtWidgets.QLabel("Word: ")
-        self.addWord_WordLabel.setFont(inapp_font)
-
         self.addWord_WordLineEdit = QtWidgets.QLineEdit()
         self.addWord_WordLineEdit.setFont(inapp_font)
         self.addWord_WordLineEdit.setMinimumWidth(300)
-        # endregion
-
-        # region Word Layouts
-        self.addWord_WordHLayout = QtWidgets.QHBoxLayout()
-        self.addWord_WordHLayout.addWidget(self.addWord_WordLabel)
-        self.addWord_WordHLayout.addWidget(self.addWord_WordLineEdit)
+        self.addWord_WordLineEdit.setPlaceholderText("New Word")
         # endregion
 
         # region Add Choose Image Line
@@ -185,6 +177,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.addWord_DefinitionsLineEdit = QtWidgets.QLineEdit()
         self.addWord_DefinitionsLineEdit.setPlaceholderText("New Definition")
         self.addWord_DefinitionsLineEdit.setFont(inapp_font)
+        self.addWord_DefinitionsLineEdit.setMaximumWidth(175)
 
         self.addWord_AddDefButton = QtWidgets.QPushButton("Add")
         self.addWord_AddDefButton.setFont(inapp_font)
@@ -197,7 +190,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         def addNewDefinition():
             word = self.addWord_DefinitionsLineEdit.text()
-
+            word = self.modifyWord(word)
             if not word:
                 return
             for i in range(self.addWord_DefinitionsListWidget.count()):
@@ -231,9 +224,12 @@ class MainWindow(QtWidgets.QMainWindow):
         # endregion
 
         # region Add Example Sentences
-        self.addWord_SentencesLineEdit = QtWidgets.QLineEdit()
-        self.addWord_SentencesLineEdit.setPlaceholderText("New Sentence")
-        self.addWord_SentencesLineEdit.setFont(inapp_font)
+        self.addWord_SentencesTextEdit = QtWidgets.QTextEdit()
+        self.addWord_SentencesTextEdit.setPlaceholderText("New Sentence")
+        self.addWord_SentencesTextEdit.setFont(inapp_font)
+        self.addWord_SentencesTextEdit.setMaximumWidth(175)
+        self.addWord_SentencesTextEdit.setMaximumHeight(80)
+        self.addWord_SentencesTextEdit.setMinimumHeight(80)
 
         self.addWord_AddSentencesButton = QtWidgets.QPushButton("Add")
         self.addWord_AddSentencesButton.setFont(inapp_font)
@@ -245,8 +241,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.addWord_SentencesListWidget.setFont(inapp_font)
 
         def addNewSentence():
-            word = self.addWord_SentencesLineEdit.text()
-
+            word = self.addWord_SentencesTextEdit.toPlainText()
+            word = self.modifyWord(word)
+            word = word.replace('\n', ' ')
             if not word:
                 return
             for i in range(self.addWord_SentencesListWidget.count()):
@@ -254,7 +251,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 if item.text() == word:
                     return
             self.addWord_SentencesListWidget.addItem(word)
-            self.addWord_SentencesLineEdit.clear()
+            self.addWord_SentencesTextEdit.clear()
         def removeNewSentence():
             item = self.addWord_SentencesListWidget.currentItem()
             if not item:
@@ -284,7 +281,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # region Example Sentence Layouts
         self.addWord_SentencesVLayout = QtWidgets.QVBoxLayout()
         self.addWord_SentencesVLayout.addStretch()
-        self.addWord_SentencesVLayout.addWidget(self.addWord_SentencesLineEdit)
+        self.addWord_SentencesVLayout.addWidget(self.addWord_SentencesTextEdit)
         self.addWord_SentencesVLayout.addWidget(self.addWord_AddSentencesButton)
         self.addWord_SentencesVLayout.addWidget(self.addWord_RemoveSentencesButton)
         self.addWord_SentencesVLayout.addStretch()
@@ -332,7 +329,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.wordData[wordName] = w.getAsDictionary()
 
             self.saveWordData()
-            self.switchMenu(Menu.ADD_WORD)
+            self.switchMenu(self.previousMenu, preloadedWord)
 
         self.addWord_SaveButton.clicked.connect(addWord)
         # endregion
@@ -349,7 +346,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.addWord_VLayout = QtWidgets.QVBoxLayout()
 
         self.addWord_VLayout.addStretch()
-        self.addWord_VLayout.addLayout(self.addWord_WordHLayout)
+        self.addWord_VLayout.addWidget(self.addWord_WordLineEdit)
         self.addWord_VLayout.addLayout(self.addWord_ChooseImageHLayout)
         self.addWord_VLayout.addStretch()
         self.addWord_VLayout.addLayout(self.addWord_DefinitionsHLayout)
@@ -373,9 +370,14 @@ class MainWindow(QtWidgets.QMainWindow):
 
             searched = self.modifyWord(word)
 
+            matchedWords = []
             for w in self.wordData.keys():
                 if w.startswith(searched):
-                    self.searchWord_ListWidget.addItem(QtWidgets.QListWidgetItem(w))
+                    matchedWords.append(w)
+
+            matchedWords = sorted(matchedWords)
+            for w in matchedWords:
+                self.searchWord_ListWidget.addItem(QtWidgets.QListWidgetItem(w))
 
         self.searchWord_LineEdit = QtWidgets.QLineEdit()
         self.searchWord_LineEdit.setPlaceholderText("Search Words...")
@@ -533,6 +535,7 @@ class MainWindow(QtWidgets.QMainWindow):
         for i, d in enumerate(currentWord.definitions):
             lbl = QtWidgets.QLabel(f'{i + 1}. {d}')
             lbl.setFont(text_font)
+            lbl.setWordWrap(True)
             self.surfWords_DefinitionsScrollAreaVLayout.addWidget(lbl)
 
         self.surfWords_DefinitionsCenteral.setLayout(self.surfWords_DefinitionsScrollAreaVLayout)
@@ -556,9 +559,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.surfWords_SentencesCenteral = QtWidgets.QWidget()
         self.surfWords_SentencesScrollAreaVLayout = QtWidgets.QVBoxLayout()
 
+
         for i, es in enumerate(currentWord.exampleSentences):
             lbl = QtWidgets.QLabel(f'{i + 1}. {es}')
             lbl.setFont(text_font)
+            lbl.setWordWrap(True)
             self.surfWords_SentencesScrollAreaVLayout.addWidget(lbl)
 
         self.surfWords_SentencesCenteral.setLayout(self.surfWords_SentencesScrollAreaVLayout)
