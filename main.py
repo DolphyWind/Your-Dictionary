@@ -492,8 +492,8 @@ class MainWindow(QtWidgets.QMainWindow):
         if currentWord.imageExists:
             self.surfWords_ImageLabel = QtWidgets.QLabel()
             pixmap = QtGui.QPixmap(currentWord.imagePath)
-            ratio = pixmap.height() / pixmap.width()
-            max_wh = 100
+            ratio = pixmap.width() / pixmap.height()
+            max_wh = 128
 
             new_width, new_height = 0, 0
             if ratio > 1:
