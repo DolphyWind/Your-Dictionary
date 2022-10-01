@@ -23,13 +23,14 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.wordData = dict()
+        self.wordDataDict = dict()
         self.loadWords()
 
         self.mainLayout = QtWidgets.QHBoxLayout()
+        self.appVersion = 'v1.4'
 
         self.windowSize = (600, 800)
-        self.setWindowTitle("Your Dictionary")
+        self.setWindowTitle(f"Your Dictionary {self.appVersion}")
         self.setGeometry(0, 0, self.windowSize[0], self.windowSize[1])
         self.center()
 
@@ -50,7 +51,7 @@ class MainWindow(QtWidgets.QMainWindow):
             return
 
         if menu == Menu.SURF_WORDS:
-            if len(self.wordData) == 0:
+            if len(self.wordDataDict) == 0:
                 QtWidgets.QMessageBox.warning(self, 'Error!', 'You Have to add some words to your dictionary!', QtWidgets.QMessageBox.Ok)
                 return
 
@@ -73,7 +74,7 @@ class MainWindow(QtWidgets.QMainWindow):
         elif menu == Menu.ADD_WORD:
             self.createAddWordMenu(wordData)
         elif menu == Menu.SEARCH_WORD:
-            self.createSearchWordMenu()
+            self.createSearchWordMenu(wordData)
         elif menu == Menu.SURF_WORDS:
             self.createSurfWordsMenu(wordData)
         else:
@@ -320,16 +321,24 @@ class MainWindow(QtWidgets.QMainWindow):
                 item = self.addWord_SentencesListWidget.item(i)
                 sentenceList.append(item.text())
 
-            if wordName in self.wordData.keys():
-                QtWidgets.QMessageBox.information(self, 'Updated a word!', f"Successfully updated {wordName}!")
+            if wordName in self.wordDataDict.keys():
+                if preloadedWord is None:
+                    mbox = QtWidgets.QMessageBox.question(self, 'Are you sure?', f'This word already exists. Do you want to update it?', QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Yes)
+                    if mbox == QtWidgets.QMessageBox.No:
+                        return
+
+                QtWidgets.QMessageBox.information(self, 'Updated a word!', f'Successfully updated "{wordName}"!')
             else:
                 QtWidgets.QMessageBox.information(self, 'Added a word!', f'You successfully added {wordName} to your dictionary!')
 
             w = word.Word(wordName, self.currentFilename, definitionsList, sentenceList)
-            self.wordData[wordName] = w.getAsDictionary()
+            self.wordDataDict[wordName] = w.getAsDictionary()
 
             self.saveWordData()
-            self.switchMenu(self.previousMenu, preloadedWord)
+            if preloadedWord is None:
+                self.switchMenu(self.currentMenu)
+            else:
+                self.switchMenu(self.previousMenu, preloadedWord)
 
         self.addWord_SaveButton.clicked.connect(addWord)
         # endregion
@@ -363,7 +372,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.central.setLayout(self.addWord_HLayout)
         # endregion
 
-    def createSearchWordMenu(self):
+    def createSearchWordMenu(self, selectedWord:word.Word = None):
         # region Line Edit and List Widget
         def updateListWidget(word: str):
             self.searchWord_ListWidget.clear()
@@ -371,7 +380,7 @@ class MainWindow(QtWidgets.QMainWindow):
             searched = self.modifyWord(word)
 
             matchedWords = []
-            for w in self.wordData.keys():
+            for w in self.wordDataDict.keys():
                 if w.startswith(searched):
                     matchedWords.append(w)
 
@@ -390,6 +399,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.searchWord_ListWidget.setMinimumHeight(400)
 
         updateListWidget('')
+        if selectedWord is not None:
+            self.searchWord_ListWidget.setCurrentItem(self.searchWord_ListWidget.findItems(selectedWord.word, QtCore.Qt.MatchExactly)[0])
+
         # endregion
 
         # region Back, Edit and Open buttons and layouts
@@ -400,7 +412,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 return
             selectedWordStr = selectedItem[0].text()
             selectedWord = word.Word()
-            selectedWord.loadFromDict(selectedWordStr, self.wordData[selectedWordStr])
+            selectedWord.loadFromDict(selectedWordStr, self.wordDataDict[selectedWordStr])
 
             self.switchMenu(Menu.ADD_WORD, selectedWord)
 
@@ -410,7 +422,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 return
             selectedWordStr = selectedItem[0].text()
             selectedWord = word.Word()
-            selectedWord.loadFromDict(selectedWordStr, self.wordData[selectedWordStr])
+            selectedWord.loadFromDict(selectedWordStr, self.wordDataDict[selectedWordStr])
 
             self.switchMenu(Menu.SURF_WORDS, selectedWord)
 
@@ -423,7 +435,7 @@ class MainWindow(QtWidgets.QMainWindow):
             reply = QtWidgets.QMessageBox.question(self, "Are you sure?", f"Do you really Want to remove {selectedWordStr} from your dictionary?",
                                                  QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
             if reply == QtWidgets.QMessageBox.Yes:
-                self.wordData.pop(selectedWordStr)
+                self.wordDataDict.pop(selectedWordStr)
                 self.switchMenu(Menu.SEARCH_WORD)
 
 
@@ -478,13 +490,13 @@ class MainWindow(QtWidgets.QMainWindow):
         # region Initialize
         if currentWord is None:
             currentWord = word.Word()
-            keys_list = list(self.wordData.keys())
+            keys_list = list(self.wordDataDict.keys())
             randomWord = keys_list[0]
-            currentWord.loadFromDict(randomWord, self.wordData[randomWord])
+            currentWord.loadFromDict(randomWord, self.wordDataDict[randomWord])
 
         index = 0
-        for i in range(len(self.wordData.keys())):
-            if list(self.wordData.keys())[i] == currentWord.word:
+        for i in range(len(self.wordDataDict.keys())):
+            if list(self.wordDataDict.keys())[i] == currentWord.word:
                 index = i
         # endregion
 
@@ -585,23 +597,23 @@ class MainWindow(QtWidgets.QMainWindow):
         def changeWord(index, step):
             index += step
             if index < 0:
-                index = len(self.wordData.keys()) - 1
-            elif index > len(self.wordData.keys()) - 1:
+                index = len(self.wordDataDict.keys()) - 1
+            elif index > len(self.wordDataDict.keys()) - 1:
                 index = 0
-            key_list = list(self.wordData.keys())
+            key_list = list(self.wordDataDict.keys())
             currentStr = key_list[index]
-            currentWord.loadFromDict(currentStr, self.wordData[currentStr])
+            currentWord.loadFromDict(currentStr, self.wordDataDict[currentStr])
             self.switchMenu(Menu.SURF_WORDS, currentWord)
 
         def getRandomWord():
             new_word = word.Word()
-            keys_list = list(self.wordData.keys())
+            keys_list = list(self.wordDataDict.keys())
             if len(keys_list) <= 1:
                 return
             randomWord = random.choice(keys_list)
             while randomWord == currentWord.word:
                 randomWord = random.choice(keys_list)
-            new_word.loadFromDict(randomWord, self.wordData[randomWord])
+            new_word.loadFromDict(randomWord, self.wordDataDict[randomWord])
             self.switchMenu(self.currentMenu, new_word)
 
         def removeSelected():
@@ -610,7 +622,7 @@ class MainWindow(QtWidgets.QMainWindow):
             reply = QtWidgets.QMessageBox.question(self, "Are you sure?", f"Do you really Want to remove {selectedWordStr} from your dictionary?",
                                                  QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
             if reply == QtWidgets.QMessageBox.Yes:
-                self.wordData.pop(selectedWordStr)
+                self.wordDataDict.pop(selectedWordStr)
                 self.switchMenu(self.previousMenu)
 
         button_width = 120
@@ -699,11 +711,11 @@ class MainWindow(QtWidgets.QMainWindow):
             f.write("{}")
             f.close()
         with open("data/words.json") as f:
-            self.wordData = json.load(f)
+            self.wordDataDict = json.load(f)
 
     def saveWordData(self):
         with open("data/words.json", 'w') as f:
-            json.dump(self.wordData, f)
+            json.dump(self.wordDataDict, f)
 
 
     def center(self):
