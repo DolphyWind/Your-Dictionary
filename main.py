@@ -174,49 +174,93 @@ class MainWindow(QtWidgets.QMainWindow):
         self.addWord_ChooseImageHLayout.addWidget(self.addWord_ChooseImageText)
         # endregion
 
+        # region Manipulating List Widgets
+
+        def addToListWidget(lWidget, wordName, textBox):
+            word = wordName
+            word = self.modifyWord(word)
+            if not word:
+                return
+            for i in range(lWidget.count()):
+                item = lWidget.item(i)
+                if item.text() == word:
+                    return
+            lWidget.addItem(word)
+            textBox.clear()
+
+        def removeFromListWidget(lWidget):
+            item = lWidget.currentItem()
+            if not item:
+                return
+            lWidget.takeItem(lWidget.row(item))
+
+        def moveSelectedToUp(lWidget):
+            items = lWidget.selectedIndexes()
+
+            if not items or items[0].row() == 0:
+                return
+            index = items[0].row()
+            item = lWidget.takeItem(index)
+            lWidget.insertItem(index - 1, item)
+            lWidget.setCurrentRow(index - 1)
+
+        def moveSelectedToDown(lWidget):
+            items = lWidget.selectedIndexes()
+
+            if not items or items[0].row() == lWidget.count() - 1:
+                return
+            index = items[0].row()
+            item = lWidget.takeItem(index)
+            lWidget.insertItem(index + 1, item)
+            lWidget.setCurrentRow(index + 1)
+
+
+        # endregion
+
         # region Add Definitions
         self.addWord_DefinitionsLineEdit = QtWidgets.QLineEdit()
         self.addWord_DefinitionsLineEdit.setPlaceholderText("New Definition")
         self.addWord_DefinitionsLineEdit.setFont(inapp_font)
         self.addWord_DefinitionsLineEdit.setMaximumWidth(175)
 
-        self.addWord_AddDefButton = QtWidgets.QPushButton("Add")
-        self.addWord_AddDefButton.setFont(inapp_font)
-
-        self.addWord_RemoveDefButton = QtWidgets.QPushButton("Remove")
-        self.addWord_RemoveDefButton.setFont(inapp_font)
-
         self.addWord_DefinitionsListWidget = QtWidgets.QListWidget()
         self.addWord_DefinitionsListWidget.setFont(inapp_font)
 
-        def addNewDefinition():
-            word = self.addWord_DefinitionsLineEdit.text()
-            word = self.modifyWord(word)
-            if not word:
-                return
-            for i in range(self.addWord_DefinitionsListWidget.count()):
-                item = self.addWord_DefinitionsListWidget.item(i)
-                if item.text() == word:
-                    return
-            self.addWord_DefinitionsListWidget.addItem(word)
-            self.addWord_DefinitionsLineEdit.clear()
+        self.addWord_AddDefButton = QtWidgets.QPushButton("Add")
+        self.addWord_AddDefButton.setFont(inapp_font)
+        self.addWord_AddDefButton.clicked.connect(
+            lambda: addToListWidget(self.addWord_DefinitionsListWidget, self.addWord_DefinitionsLineEdit.text(), self.addWord_DefinitionsLineEdit)
+        )
 
-        def removeNewDefinition():
-            item = self.addWord_DefinitionsListWidget.currentItem()
-            if not item:
-                return
-            self.addWord_DefinitionsListWidget.takeItem(self.addWord_DefinitionsListWidget.row(item))
+        self.addWord_RemoveDefButton = QtWidgets.QPushButton("Remove")
+        self.addWord_RemoveDefButton.setFont(inapp_font)
+        self.addWord_RemoveDefButton.clicked.connect(lambda: removeFromListWidget(self.addWord_DefinitionsListWidget))
 
-        self.addWord_AddDefButton.clicked.connect(addNewDefinition)
-        self.addWord_RemoveDefButton.clicked.connect(removeNewDefinition)
+        self.addWord_UpDefButton = QtWidgets.QPushButton("Up")
+        self.addWord_UpDefButton.setFont(inapp_font)
+        self.addWord_UpDefButton.clicked.connect(lambda: moveSelectedToUp(self.addWord_DefinitionsListWidget))
+
+        self.addWord_DownDefButton = QtWidgets.QPushButton("Down")
+        self.addWord_DownDefButton.setFont(inapp_font)
+        self.addWord_DownDefButton.clicked.connect(lambda: moveSelectedToDown(self.addWord_DefinitionsListWidget))
+
         # endregion
 
         # region Definition Layouts
+
+        self.addWord_AddRemoveDefHLayout = QtWidgets.QHBoxLayout()
+        self.addWord_AddRemoveDefHLayout.addWidget(self.addWord_AddDefButton)
+        self.addWord_AddRemoveDefHLayout.addWidget(self.addWord_RemoveDefButton)
+
+        self.addWord_UpDownDefHLayout = QtWidgets.QHBoxLayout()
+        self.addWord_UpDownDefHLayout.addWidget(self.addWord_UpDefButton)
+        self.addWord_UpDownDefHLayout.addWidget(self.addWord_DownDefButton)
+
         self.addWord_DefinitionsVLayout = QtWidgets.QVBoxLayout()
         self.addWord_DefinitionsVLayout.addStretch()
         self.addWord_DefinitionsVLayout.addWidget(self.addWord_DefinitionsLineEdit)
-        self.addWord_DefinitionsVLayout.addWidget(self.addWord_AddDefButton)
-        self.addWord_DefinitionsVLayout.addWidget(self.addWord_RemoveDefButton)
+        self.addWord_DefinitionsVLayout.addLayout(self.addWord_AddRemoveDefHLayout)
+        self.addWord_DefinitionsVLayout.addLayout(self.addWord_UpDownDefHLayout)
         self.addWord_DefinitionsVLayout.addStretch()
 
         self.addWord_DefinitionsHLayout = QtWidgets.QHBoxLayout()
@@ -232,35 +276,27 @@ class MainWindow(QtWidgets.QMainWindow):
         self.addWord_SentencesTextEdit.setMaximumHeight(80)
         self.addWord_SentencesTextEdit.setMinimumHeight(80)
 
-        self.addWord_AddSentencesButton = QtWidgets.QPushButton("Add")
-        self.addWord_AddSentencesButton.setFont(inapp_font)
-
-        self.addWord_RemoveSentencesButton = QtWidgets.QPushButton("Remove")
-        self.addWord_RemoveSentencesButton.setFont(inapp_font)
-
         self.addWord_SentencesListWidget = QtWidgets.QListWidget()
         self.addWord_SentencesListWidget.setFont(inapp_font)
 
-        def addNewSentence():
-            word = self.addWord_SentencesTextEdit.toPlainText()
-            word = self.modifyWord(word)
-            word = word.replace('\n', ' ')
-            if not word:
-                return
-            for i in range(self.addWord_SentencesListWidget.count()):
-                item = self.addWord_SentencesListWidget.item(i)
-                if item.text() == word:
-                    return
-            self.addWord_SentencesListWidget.addItem(word)
-            self.addWord_SentencesTextEdit.clear()
-        def removeNewSentence():
-            item = self.addWord_SentencesListWidget.currentItem()
-            if not item:
-                return
-            self.addWord_SentencesListWidget.takeItem(self.addWord_SentencesListWidget.row(item))
+        self.addWord_AddSentencesButton = QtWidgets.QPushButton("Add")
+        self.addWord_AddSentencesButton.setFont(inapp_font)
+        self.addWord_AddSentencesButton.clicked.connect(
+            lambda: addToListWidget(self.addWord_SentencesListWidget, self.addWord_SentencesTextEdit.toPlainText(), self.addWord_SentencesTextEdit)
+        )
 
-        self.addWord_AddSentencesButton.clicked.connect(addNewSentence)
-        self.addWord_RemoveSentencesButton.clicked.connect(removeNewSentence)
+        self.addWord_RemoveSentencesButton = QtWidgets.QPushButton("Remove")
+        self.addWord_RemoveSentencesButton.setFont(inapp_font)
+        self.addWord_RemoveSentencesButton.clicked.connect(lambda: removeFromListWidget(self.addWord_SentencesListWidget))
+
+        self.addWord_UpSentenceButton = QtWidgets.QPushButton("Up")
+        self.addWord_UpSentenceButton.setFont(inapp_font)
+        self.addWord_UpSentenceButton.clicked.connect(lambda: moveSelectedToUp(self.addWord_SentencesListWidget))
+
+        self.addWord_DownSentenceButton = QtWidgets.QPushButton("Down")
+        self.addWord_DownSentenceButton.setFont(inapp_font)
+        self.addWord_DownSentenceButton.clicked.connect(lambda: moveSelectedToDown(self.addWord_SentencesListWidget))
+
         # endregion
 
         # region Check if has pre loaded word
@@ -280,11 +316,20 @@ class MainWindow(QtWidgets.QMainWindow):
         # endregion
 
         # region Example Sentence Layouts
+
+        self.addWord_AddRemoveSentencesHLayout = QtWidgets.QHBoxLayout()
+        self.addWord_AddRemoveSentencesHLayout.addWidget(self.addWord_AddSentencesButton)
+        self.addWord_AddRemoveSentencesHLayout.addWidget(self.addWord_RemoveSentencesButton)
+
+        self.addWord_UpDownSentencesHLayout = QtWidgets.QHBoxLayout()
+        self.addWord_UpDownSentencesHLayout.addWidget(self.addWord_UpSentenceButton)
+        self.addWord_UpDownSentencesHLayout.addWidget(self.addWord_DownSentenceButton)
+
         self.addWord_SentencesVLayout = QtWidgets.QVBoxLayout()
         self.addWord_SentencesVLayout.addStretch()
         self.addWord_SentencesVLayout.addWidget(self.addWord_SentencesTextEdit)
-        self.addWord_SentencesVLayout.addWidget(self.addWord_AddSentencesButton)
-        self.addWord_SentencesVLayout.addWidget(self.addWord_RemoveSentencesButton)
+        self.addWord_SentencesVLayout.addLayout(self.addWord_AddRemoveSentencesHLayout)
+        self.addWord_SentencesVLayout.addLayout(self.addWord_UpDownSentencesHLayout)
         self.addWord_SentencesVLayout.addStretch()
 
         self.addWord_SentencesHLayout = QtWidgets.QHBoxLayout()
@@ -338,7 +383,7 @@ class MainWindow(QtWidgets.QMainWindow):
             if preloadedWord is None:
                 self.switchMenu(self.currentMenu)
             else:
-                self.switchMenu(self.previousMenu, preloadedWord)
+                self.switchMenu(self.previousMenu, w)
 
         self.addWord_SaveButton.clicked.connect(addWord)
         # endregion
@@ -378,14 +423,22 @@ class MainWindow(QtWidgets.QMainWindow):
             self.searchWord_ListWidget.clear()
 
             searched = self.modifyWord(word)
+            searched = searched.lower()
 
-            matchedWords = []
+            matchedWordsStartsWith = []
+            matchedWordsIncludes = []
+
             for w in self.wordDataDict.keys():
-                if w.startswith(searched):
-                    matchedWords.append(w)
+                if w.lower().startswith(searched):
+                    matchedWordsStartsWith.append(w)
+                elif searched in w.lower():
+                    matchedWordsIncludes.append(w)
 
-            matchedWords = sorted(matchedWords)
-            for w in matchedWords:
+            matchedWordsStartsWith = sorted(matchedWordsStartsWith)
+            matchedWordsIncludes = sorted(matchedWordsIncludes)
+            matchedWordsStartsWith += matchedWordsIncludes
+
+            for w in matchedWordsStartsWith:
                 self.searchWord_ListWidget.addItem(QtWidgets.QListWidgetItem(w))
 
         self.searchWord_LineEdit = QtWidgets.QLineEdit()
@@ -487,16 +540,17 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def createSurfWordsMenu(self, currentWord:word.Word = None):
 
+        keys_list = sorted(list(self.wordDataDict.keys()))
+
         # region Initialize
         if currentWord is None:
             currentWord = word.Word()
-            keys_list = list(self.wordDataDict.keys())
             randomWord = keys_list[0]
             currentWord.loadFromDict(randomWord, self.wordDataDict[randomWord])
 
         index = 0
-        for i in range(len(self.wordDataDict.keys())):
-            if list(self.wordDataDict.keys())[i] == currentWord.word:
+        for i in range(len(keys_list)):
+            if keys_list[i] == currentWord.word:
                 index = i
         # endregion
 
@@ -597,17 +651,15 @@ class MainWindow(QtWidgets.QMainWindow):
         def changeWord(index, step):
             index += step
             if index < 0:
-                index = len(self.wordDataDict.keys()) - 1
-            elif index > len(self.wordDataDict.keys()) - 1:
+                index = len(keys_list) - 1
+            elif index > len(keys_list) - 1:
                 index = 0
-            key_list = list(self.wordDataDict.keys())
-            currentStr = key_list[index]
+            currentStr = keys_list[index]
             currentWord.loadFromDict(currentStr, self.wordDataDict[currentStr])
             self.switchMenu(Menu.SURF_WORDS, currentWord)
 
         def getRandomWord():
             new_word = word.Word()
-            keys_list = list(self.wordDataDict.keys())
             if len(keys_list) <= 1:
                 return
             randomWord = random.choice(keys_list)
