@@ -27,7 +27,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.loadWords()
 
         self.mainLayout = QtWidgets.QHBoxLayout()
-        self.appVersion = 'v1.4'
+        self.appVersion = 'v1.6'
 
         self.windowSize = (600, 800)
         self.setWindowTitle(f"Your Dictionary {self.appVersion}")
@@ -756,17 +756,17 @@ class MainWindow(QtWidgets.QMainWindow):
         # endregion
 
     def loadWords(self):
-        if not os.path.exists("data"):
-            os.mkdir("data")
-        if not os.path.exists("data/words.json"):
-            f = open("data/words.json", "w")
+        if not os.path.exists(word.dataFoldername):
+            os.mkdir(word.dataFoldername)
+        if not os.path.exists(f"{word.dataFoldername}/words.json"):
+            f = open(f"{word.dataFoldername}/words.json", "w")
             f.write("{}")
             f.close()
-        with open("data/words.json") as f:
+        with open(f"{word.dataFoldername}/words.json") as f:
             self.wordDataDict = json.load(f)
 
     def saveWordData(self):
-        with open("data/words.json", 'w') as f:
+        with open(f"{word.dataFoldername}/words.json", 'w') as f:
             json.dump(self.wordDataDict, f)
 
 

@@ -1,6 +1,8 @@
 import os
 import shutil
 
+dataFoldername = 'dictionary_data'
+
 class Word:
     def __init__(self, word: str = None, imagePath: str = None, definitions: list = None, exampleSentences: list = None):
         if not word:
@@ -22,7 +24,7 @@ class Word:
             return
 
         self.fileExtension = self.imagePath.split('.')[-1]
-        self.newImagePath = f'data/{self.word}.{self.fileExtension}'
+        self.newImagePath = f'{dataFoldername}/{self.word}.{self.fileExtension}'
         if self.imagePath != self.newImagePath:
             shutil.copy2(self.imagePath, self.newImagePath)
 
@@ -36,4 +38,4 @@ class Word:
         self.exampleSentences = dct['exampleSentences']
         self.fileExtension = dct['fileExtension']
         if self.imageExists:
-            self.imagePath = f'data/{self.word}.{self.fileExtension}'
+            self.imagePath = f'{dataFoldername}/{self.word}.{self.fileExtension}'
