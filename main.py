@@ -12,6 +12,10 @@ button_font = QtGui.QFont("OpenSans", 16)
 text_font = QtGui.QFont("OpenSans", 16)
 inapp_font = QtGui.QFont("OpenSans", 12)
 
+class Global:
+    GAME_PROMPT_KEY = 'prompt_game_howtoplay'
+    HIGHSCORE_KEY = 'highscore'
+
 class Menu(Enum):
     MAIN_MENU = 1
     ADD_WORD = 2
@@ -24,10 +28,15 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
         self.wordDataDict = dict()
+        self.appdataDict = {
+            Global.GAME_PROMPT_KEY: True,
+            Global.HIGHSCORE_KEY: 0,
+        }
         self.loadWords()
-
+        self.loadAppdata()
+        
         self.mainLayout = QtWidgets.QHBoxLayout()
-        self.appVersion = 'v1.6'
+        self.appVersion = 'v1.7'
 
         self.windowSize = (600, 800)
         self.setWindowTitle(f"Your Dictionary {self.appVersion}")
@@ -48,8 +57,19 @@ class MainWindow(QtWidgets.QMainWindow):
     def switchMenu(self, menu: Menu, wordData: word.Word = None):
 
         if menu == Menu.PLAY_GAME:
-            return
-
+            if self.appdataDict[Global.GAME_PROMPT_KEY]:
+                msgBox = QtWidgets.QMessageBox()
+                msgBox.setIcon(QtWidgets.QMessageBox.Icon.Information)
+                msgBox.setWindowTitle("How word game works?")
+                msgBox.setText("On each round, game will pick a random word. In order to gain points, you have to choose the definition of that word among four choices. Right answer gives you four points. Wrong answer takes one of your points. Good luck!")
+                msgBox.setStandardButtons(QtWidgets.QMessageBox.StandardButton.Ok)
+                
+                cb = QtWidgets.QCheckBox("Do not show again")
+                msgBox.setCheckBox(cb)
+                
+                msgBox.exec()
+                self.appdataDict[Global.GAME_PROMPT_KEY] = not cb.isChecked()
+                
         if menu == Menu.SURF_WORDS:
             if len(self.wordDataDict) == 0:
                 QtWidgets.QMessageBox.warning(self, 'Error!', 'You Have to add some words to your dictionary!', QtWidgets.QMessageBox.Ok)
@@ -77,6 +97,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.createSearchWordMenu(wordData)
         elif menu == Menu.SURF_WORDS:
             self.createSurfWordsMenu(wordData)
+        elif menu == Menu.PLAY_GAME:
+            self.createPlayGameMenu()
         else:
             self.central.setLayout(self.mainMenu_HLayout)
 
@@ -436,10 +458,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
             matchedWordsStartsWith = sorted(matchedWordsStartsWith)
             matchedWordsIncludes = sorted(matchedWordsIncludes)
-            matchedWordsStartsWith += matchedWordsIncludes
+            matchedWords = matchedWordsStartsWith + matchedWordsIncludes
 
-            for w in matchedWordsStartsWith:
+            for w in matchedWords:
                 self.searchWord_ListWidget.addItem(QtWidgets.QListWidgetItem(w))
+            
+            self.wordInfo_Label.setText(f"Listing {len(matchedWords)} of {len(self.wordDataDict)} words")
 
         self.searchWord_LineEdit = QtWidgets.QLineEdit()
         self.searchWord_LineEdit.setPlaceholderText("Search Words...")
@@ -450,6 +474,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.searchWord_ListWidget = QtWidgets.QListWidget()
         self.searchWord_ListWidget.setFont(inapp_font)
         self.searchWord_ListWidget.setMinimumHeight(400)
+        
+        self.wordInfo_Label = QtWidgets.QLabel(f"Listing {len(self.wordDataDict)} of {len(self.wordDataDict)} words")
+        self.wordInfo_Label.setFont(inapp_font)
 
         updateListWidget('')
         if selectedWord is not None:
@@ -525,6 +552,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.searchWord_MainVLayout.addStretch()
         self.searchWord_MainVLayout.addWidget(self.searchWord_LineEdit)
         self.searchWord_MainVLayout.addWidget(self.searchWord_ListWidget)
+        self.searchWord_MainVLayout.addWidget(self.wordInfo_Label)
         self.searchWord_MainVLayout.addStretch()
         self.searchWord_MainVLayout.addLayout(self.searchWord_ButtonHLayout)
         self.searchWord_MainVLayout.addStretch()
@@ -694,7 +722,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.surfWords_BackButton.setMinimumWidth(button_width)
         self.surfWords_BackButton.clicked.connect(lambda: self.switchMenu(self.previousMenu, currentWord))
 
-        self.surfWords_GetRandomButton = QtWidgets.QPushButton("Get Random")
+        self.surfWords_GetRandomButton = QtWidgets.QPushButton("Random")
         self.surfWords_GetRandomButton.setFont(inapp_font)
         self.surfWords_GetRandomButton.setMinimumWidth(button_width)
         self.surfWords_GetRandomButton.clicked.connect(getRandomWord)
@@ -755,6 +783,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.central.setLayout(self.surfWords_MainHLayout)
         # endregion
 
+    def createPlayGameMenu(self):
+        pass
+    
     def loadWords(self):
         if not os.path.exists(word.dataFoldername):
             os.mkdir(word.dataFoldername)
@@ -765,9 +796,23 @@ class MainWindow(QtWidgets.QMainWindow):
         with open(f"{word.dataFoldername}/words.json") as f:
             self.wordDataDict = json.load(f)
 
+    def loadAppdata(self):
+        if not os.path.exists(word.dataFoldername):
+            os.mkdir(word.dataFoldername)
+        if not os.path.exists(f"{word.dataFoldername}/appdata.json"):
+            f = open(f"{word.dataFoldername}/appdata.json", "w")
+            json.dump(self.appdataDict, f)
+            f.close()
+        with open(f"{word.dataFoldername}/appdata.json") as f:
+            self.appdataDict = json.load(f)
+    
     def saveWordData(self):
         with open(f"{word.dataFoldername}/words.json", 'w') as f:
             json.dump(self.wordDataDict, f)
+    
+    def saveAppdata(self):
+        with open(f"{word.dataFoldername}/appdata.json", 'w') as f:
+            json.dump(self.appdataDict, f)
 
 
     def center(self):
@@ -782,6 +827,7 @@ def main():
     window = MainWindow()
     exit_code = app.exec_()
     window.saveWordData()
+    window.saveAppdata()
     sys.exit(exit_code)
 
 if __name__ == '__main__':
