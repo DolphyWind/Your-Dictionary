@@ -817,7 +817,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def center(self):
         qr = self.frameGeometry()
-        cp = QtWidgets.QDesktopWidget().availableGeometry().center()
+        cp = QtGui.QGuiApplication.primaryScreen().availableGeometry().center()
         qr.moveCenter(cp)
         self.move(qr.topLeft())
 
@@ -825,7 +825,7 @@ class MainWindow(QtWidgets.QMainWindow):
 def main():
     app = QtWidgets.QApplication(sys.argv)
     window = MainWindow()
-    exit_code = app.exec_()
+    exit_code = app.exec()
     window.saveWordData()
     window.saveAppdata()
     sys.exit(exit_code)

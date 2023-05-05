@@ -1,0 +1,3 @@
++ Finish word game
++ Update frontend
++ Move to Qt6 (Has some UI problems)
