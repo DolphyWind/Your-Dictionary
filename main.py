@@ -790,12 +790,21 @@ class MainWindow(QtWidgets.QMainWindow):
         random.shuffle(shuffled_keys)
         self.score = 0
         
+        def clear_correct_incorrect_label():
+            self.correct_incorrect_Label.setText("")
+        
         def chose_correct_answer():
+            self.correct_incorrect_Label.setStyleSheet("color:green;")
+            self.correct_incorrect_Label.setText("Correct!")
             self.score += 4
             self.score_Label.setText(f"Score: {self.score}")
             reload_playgame()
+            
+            QtCore.QTimer.singleShot(1000, clear_correct_incorrect_label)
         
         def chose_wrong_answer():
+            self.correct_incorrect_Label.setStyleSheet("color:red;")
+            self.correct_incorrect_Label.setText("Incorrect!")
             self.score -= 1
             self.score_Label.setText(f"Score: {self.score}")
             for button in self.buttons:
@@ -814,6 +823,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     pass
             
             QtCore.QTimer.singleShot(800, erase_colors)
+            QtCore.QTimer.singleShot(800, clear_correct_incorrect_label)
         
         def reload_playgame():
             # Choose words
@@ -885,6 +895,7 @@ class MainWindow(QtWidgets.QMainWindow):
         
         # region Correct/Incorrect label
         self.correct_incorrect_Label = QtWidgets.QLabel("")
+        self.correct_incorrect_Label.setFont(inapp_font)
         self.correct_incorrect_HLayout = QtWidgets.QHBoxLayout()
         self.correct_incorrect_HLayout.addStretch()
         self.correct_incorrect_HLayout.addWidget(self.correct_incorrect_Label)
@@ -935,6 +946,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.playGame_MainVLayout.addWidget(self.top_question_label)
         self.playGame_MainVLayout.addWidget(self.bottom_question_label)
         self.playGame_MainVLayout.addWidget(self.getVerticalSpacer(120))
+        self.playGame_MainVLayout.addLayout(self.correct_incorrect_HLayout)
         self.playGame_MainVLayout.addLayout(self.playGame_buttonsVLayout)
         
         self.playGame_MainVLayout.addWidget(self.getVerticalSpacer(45))
