@@ -5,6 +5,7 @@ import json
 from enum import Enum
 import random
 import word
+import time
 
 header_font = QtGui.QFont("OpenSans", 28)
 wordTitle_font = QtGui.QFont("OpenSans", 22)
@@ -61,7 +62,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 msgBox = QtWidgets.QMessageBox()
                 msgBox.setIcon(QtWidgets.QMessageBox.Icon.Information)
                 msgBox.setWindowTitle("How word game works?")
-                msgBox.setText("On each round, game will pick a random word. In order to gain points, you have to choose the definition of that word among four choices. Right answer gives you four points. Wrong answer takes one of your points. Good luck!")
+                msgBox.setText("On each round, game will pick a random word. In order to gain points, you have to choose the definition of that word among four choices. Right answer gives you four points. Wrong answer takes one of your points. When the game ends, your score will get multiplied by how many words you saved to better indicate how well you know these words. Good luck!")
                 msgBox.setStandardButtons(QtWidgets.QMessageBox.StandardButton.Ok)
                 
                 cb = QtWidgets.QCheckBox("Do not show again")
@@ -784,7 +785,170 @@ class MainWindow(QtWidgets.QMainWindow):
         # endregion
 
     def createPlayGameMenu(self):
-        pass
+        all_keys = list(self.wordDataDict.keys())
+        shuffled_keys = list(self.wordDataDict.keys())
+        random.shuffle(shuffled_keys)
+        self.score = 0
+        
+        def chose_correct_answer():
+            self.score += 4
+            self.score_Label.setText(f"Score: {self.score}")
+            reload_playgame()
+        
+        def chose_wrong_answer():
+            self.score -= 1
+            self.score_Label.setText(f"Score: {self.score}")
+            for button in self.buttons:
+                button.setStyleSheet("QPushButton:disabled { color: white; background-color: red;}")
+                button.setEnabled(False)
+            self.buttons[3].setStyleSheet("QPushButton:disabled { color: white; background-color: blue;}")
+            
+            def erase_colors():
+                try:
+                    for button in self.buttons:
+                        button.setStyleSheet("")
+                        button.setEnabled(True)
+                    
+                    reload_playgame()
+                except:
+                    pass
+            
+            QtCore.QTimer.singleShot(800, erase_colors)
+        
+        def reload_playgame():
+            # Choose words
+            if not shuffled_keys:
+                pass
+            
+            current_word = shuffled_keys[0]
+            del shuffled_keys[0]
+            other_words = [current_word]
+            
+            definitions = self.wordDataDict[current_word]['definitions']
+            incorrect_words = []
+            while True:
+                incorrect_words = random.sample(all_keys, 3)
+                all_ok = True
+                for word in incorrect_words:
+                    for word_def in self.wordDataDict[word]['definitions']:
+                        if word_def in definitions:
+                            all_ok = False
+                            break
+                    if not all_ok:
+                        break
+                
+                if all_ok:
+                    break
+            
+            # Update Widgets
+            self.buttons = [self.choiceA_button, self.choiceB_button, self.choiceC_button, self.choiceD_button]
+            random.shuffle(self.buttons)
+            try:
+                for button in self.buttons:
+                    button.clicked.disconnect()
+            except:
+                pass
+            for i, inc_word in enumerate(incorrect_words):
+                self.buttons[i].setText(random.choice(self.wordDataDict[inc_word]['definitions']))
+                self.buttons[i].clicked.connect(chose_wrong_answer)
+            self.buttons[3].setText(random.choice(self.wordDataDict[current_word]['definitions']))
+            self.buttons[3].clicked.connect(chose_correct_answer)
+            
+            self.bottom_question_label.setText(f"of the word \"<font color=\"red\">{current_word}</font>\"?")
+        
+        # region score and timer label
+        self.score_Label = QtWidgets.QLabel("Score: 0")
+        self.score_Label.setFont(inapp_font)
+        self.score_Label.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
+        self.score_Label.setMinimumWidth(200)
+        self.timer_Label = QtWidgets.QLabel("Timer: 60")
+        self.timer_Label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight)
+        self.timer_Label.setFont(inapp_font)
+        self.timer_Label.setMinimumWidth(200)
+        
+        self.playGame_TopHLayout = QtWidgets.QHBoxLayout()
+        self.playGame_TopHLayout.addWidget(self.score_Label)
+        self.playGame_TopHLayout.addStretch()
+        self.playGame_TopHLayout.addWidget(self.timer_Label)
+        # endregion
+        
+        # region Question Label
+        # self.question_label = QtWidgets.QLabel("What is the correct definition of the word <font color=\"red\">word</font>?")
+        self.top_question_label = QtWidgets.QLabel("What is the correct definition")
+        self.top_question_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignHCenter)
+        self.top_question_label.setFont(text_font)
+        
+        self.bottom_question_label = QtWidgets.QLabel("of the word \"<font color=\"red\">word</font>\"?")
+        self.bottom_question_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignHCenter)
+        self.bottom_question_label.setFont(text_font)
+        # endregion
+        
+        # region Correct/Incorrect label
+        self.correct_incorrect_Label = QtWidgets.QLabel("")
+        self.correct_incorrect_HLayout = QtWidgets.QHBoxLayout()
+        self.correct_incorrect_HLayout.addStretch()
+        self.correct_incorrect_HLayout.addWidget(self.correct_incorrect_Label)
+        self.correct_incorrect_HLayout.addStretch()
+        # endregion
+        
+        # region Buttons
+        self.choiceA_button = QtWidgets.QPushButton("Choice A")
+        self.choiceA_button.setFont(button_font)
+        self.choiceB_button = QtWidgets.QPushButton("Choice B")
+        self.choiceB_button.setFont(button_font)
+        self.choiceC_button = QtWidgets.QPushButton("Choice C")
+        self.choiceC_button.setFont(button_font)
+        self.choiceD_button = QtWidgets.QPushButton("Choice D")
+        self.choiceD_button.setFont(button_font)
+        
+        self.playGame_ABHorizontalLayout = QtWidgets.QHBoxLayout()
+        self.playGame_ABHorizontalLayout.addWidget(self.choiceA_button)
+        self.playGame_ABHorizontalLayout.addWidget(self.choiceB_button)
+        
+        self.playGame_CDHorizontalLayout = QtWidgets.QHBoxLayout()
+        self.playGame_CDHorizontalLayout.addWidget(self.choiceC_button)
+        self.playGame_CDHorizontalLayout.addWidget(self.choiceD_button)
+        
+        self.playGame_buttonsVLayout = QtWidgets.QVBoxLayout()
+        self.playGame_buttonsVLayout.addLayout(self.playGame_ABHorizontalLayout)
+        self.playGame_buttonsVLayout.addLayout(self.playGame_CDHorizontalLayout)
+        # endregion
+        
+        # region Bottom buttons
+        self.playGame_BackButton = QtWidgets.QPushButton("Back")
+        self.playGame_BackButton.setFont(inapp_font)
+        self.playGame_BackButton.setMinimumWidth(120)
+        self.playGame_BackButton.setMaximumWidth(120)
+        self.playGame_BackButton.clicked.connect(lambda: self.switchMenu(self.previousMenu))
+        
+        self.playGame_BottomHLayout = QtWidgets.QHBoxLayout()
+        self.playGame_BottomHLayout.addStretch()
+        self.playGame_BottomHLayout.addWidget(self.playGame_BackButton)
+        self.playGame_BottomHLayout.addStretch()
+        # endregion
+        
+        # region Main Layouts
+        self.playGame_MainVLayout = QtWidgets.QVBoxLayout()
+        self.playGame_MainVLayout.addWidget(self.getVerticalSpacer(30))
+        self.playGame_MainVLayout.addLayout(self.playGame_TopHLayout)
+        self.playGame_MainVLayout.addStretch()
+        self.playGame_MainVLayout.addWidget(self.top_question_label)
+        self.playGame_MainVLayout.addWidget(self.bottom_question_label)
+        self.playGame_MainVLayout.addWidget(self.getVerticalSpacer(120))
+        self.playGame_MainVLayout.addLayout(self.playGame_buttonsVLayout)
+        
+        self.playGame_MainVLayout.addWidget(self.getVerticalSpacer(45))
+        self.playGame_MainVLayout.addLayout(self.playGame_BottomHLayout)
+        self.playGame_MainVLayout.addWidget(self.getVerticalSpacer(30))
+        
+        self.playGame_MainHLayout = QtWidgets.QHBoxLayout()
+        self.playGame_MainHLayout.addStretch()
+        self.playGame_MainHLayout.addLayout(self.playGame_MainVLayout)
+        self.playGame_MainHLayout.addStretch()
+        self.central.setLayout(self.playGame_MainHLayout)
+        # endregion
+        
+        reload_playgame()
     
     def loadWords(self):
         if not os.path.exists(word.dataFoldername):
@@ -805,6 +969,13 @@ class MainWindow(QtWidgets.QMainWindow):
             f.close()
         with open(f"{word.dataFoldername}/appdata.json") as f:
             self.appdataDict = json.load(f)
+    
+    # Creates a label with given height and returns it
+    def getVerticalSpacer(self, height):
+        spacer = QtWidgets.QLabel(" ")
+        spacer.setMinimumHeight(height)
+        spacer.setMaximumHeight(height)
+        return spacer
     
     def saveWordData(self):
         with open(f"{word.dataFoldername}/words.json", 'w') as f:
