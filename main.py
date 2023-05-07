@@ -107,7 +107,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # region Title
         self.mainMenu_Title = QtWidgets.QLabel("Your Dictionary")
         self.mainMenu_Title.setFont(header_font)
-        self.mainMenu_Title.setAlignment(QtCore.Qt.AlignCenter)
+        self.mainMenu_Title.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         # endregion
 
         # region Buttons
@@ -790,6 +790,35 @@ class MainWindow(QtWidgets.QMainWindow):
         random.shuffle(shuffled_keys)
         self.score = 0
         
+        def update_timer():
+            try:
+                self.time_elapsed += 1
+                self.timer_Label.setText(f"Timer: {60 - self.time_elapsed}")
+                if self.time_elapsed >= 60:
+                    self.game_timer.stop()
+                    self.game_timer.disconnect()
+                    word_count = len(self.wordDataDict.keys())
+                    
+                    msgbox_msg = f"Score: {self.score}\nFinal Score: {self.score}*{word_count}={self.score * word_count}\n"
+                    self.score *= word_count
+                    highscore = self.appdataDict[Global.HIGHSCORE_KEY]
+                    if self.score > highscore:
+                        msgbox_msg += "Congrats! This is your new highscore!"
+                        self.appdataDict[Global.HIGHSCORE_KEY] = self.score
+                    else:
+                        msgbox_msg += f"Highscore: {highscore}"
+                    
+                    QtWidgets.QMessageBox.information(self, "Game has ended!", msgbox_msg)
+                    self.switchMenu(Menu.MAIN_MENU)
+            except:
+                pass
+        
+        self.game_timer = QtCore.QTimer()
+        self.game_timer.setInterval(1000)
+        self.game_timer.timeout.connect(update_timer)
+        self.game_timer.start()
+        self.time_elapsed = 0
+        
         def clear_correct_incorrect_label():
             self.correct_incorrect_Label.setText("")
         
@@ -814,6 +843,7 @@ class MainWindow(QtWidgets.QMainWindow):
             
             def erase_colors():
                 try:
+                    self.game_timer.start()
                     for button in self.buttons:
                         button.setStyleSheet("")
                         button.setEnabled(True)
@@ -822,6 +852,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 except:
                     pass
             
+            self.game_timer.stop()
             QtCore.QTimer.singleShot(800, erase_colors)
             QtCore.QTimer.singleShot(800, clear_correct_incorrect_label)
         
@@ -866,6 +897,16 @@ class MainWindow(QtWidgets.QMainWindow):
             
             self.bottom_question_label.setText(f"of the word \"<font color=\"red\">{current_word}</font>\"?")
         
+        def go_back():
+            try:
+                self.game_timer.stop()
+                answer = QtWidgets.QMessageBox.question(self, "Confirmation", "Do you really want to go back? All progress will be lost.")
+                if answer == QtWidgets.QMessageBox.Yes:
+                    self.switchMenu(Menu.MAIN_MENU)
+                else:
+                    self.game_timer.start()
+            except:
+                pass
         # region score and timer label
         self.score_Label = QtWidgets.QLabel("Score: 0")
         self.score_Label.setFont(inapp_font)
@@ -882,8 +923,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.playGame_TopHLayout.addWidget(self.timer_Label)
         # endregion
         
-        # region Question Label
-        # self.question_label = QtWidgets.QLabel("What is the correct definition of the word <font color=\"red\">word</font>?")
+        # region Question Labels
         self.top_question_label = QtWidgets.QLabel("What is the correct definition")
         self.top_question_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignHCenter)
         self.top_question_label.setFont(text_font)
@@ -930,7 +970,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.playGame_BackButton.setFont(inapp_font)
         self.playGame_BackButton.setMinimumWidth(120)
         self.playGame_BackButton.setMaximumWidth(120)
-        self.playGame_BackButton.clicked.connect(lambda: self.switchMenu(self.previousMenu))
+        self.playGame_BackButton.clicked.connect(go_back)
         
         self.playGame_BottomHLayout = QtWidgets.QHBoxLayout()
         self.playGame_BottomHLayout.addStretch()
