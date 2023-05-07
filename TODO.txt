@@ -1,4 +1,2 @@
-+ Handle when there are no words left on word game
-+ Handle if user has no words in word game
 + Update frontend
 + Move to Qt6 (Has some UI problems and requires some minor changes)

@@ -58,6 +58,9 @@ class MainWindow(QtWidgets.QMainWindow):
     def switchMenu(self, menu: Menu, wordData: word.Word = None):
 
         if menu == Menu.PLAY_GAME:
+            if len(self.wordDataDict.keys()) < 4:
+                QtWidgets.QMessageBox.critical(self, "Error!", "Please add some more words to Your Dictionary")
+                return
             if self.appdataDict[Global.GAME_PROMPT_KEY]:
                 msgBox = QtWidgets.QMessageBox()
                 msgBox.setIcon(QtWidgets.QMessageBox.Icon.Information)
@@ -798,8 +801,10 @@ class MainWindow(QtWidgets.QMainWindow):
                     self.game_timer.stop()
                     self.game_timer.disconnect()
                     word_count = len(self.wordDataDict.keys())
-                    
-                    msgbox_msg = f"Score: {self.score}\nFinal Score: {self.score}*{word_count}={self.score * word_count}\n"
+                    msgbox_msg = ""
+                    if len(shuffled_keys) == 0:
+                        msgbox_msg += "There are no more words left!\n"
+                    msgbox_msg += f"Score: {self.score}\nFinal Score: {self.score}*{word_count}={self.score * word_count}\n"
                     self.score *= word_count
                     highscore = self.appdataDict[Global.HIGHSCORE_KEY]
                     if self.score > highscore:
@@ -820,7 +825,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.time_elapsed = 0
         
         def clear_correct_incorrect_label():
-            self.correct_incorrect_Label.setText("")
+            try:
+                self.correct_incorrect_Label.setText("")
+            except:
+                pass
         
         def chose_correct_answer():
             self.correct_incorrect_Label.setStyleSheet("color:green;")
@@ -859,11 +867,13 @@ class MainWindow(QtWidgets.QMainWindow):
         def reload_playgame():
             # Choose words
             if not shuffled_keys:
-                pass
+                self.time_elapsed = 59
+                self.game_timer.stop()
+                update_timer()
+                return
             
             current_word = shuffled_keys[0]
             del shuffled_keys[0]
-            other_words = [current_word]
             
             definitions = self.wordDataDict[current_word]['definitions']
             incorrect_words = []
