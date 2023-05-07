@@ -117,7 +117,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.mainMenu_AddAWordButton = QtWidgets.QPushButton("Add Word")
         self.mainMenu_AddAWordButton.clicked.connect(lambda: self.switchMenu(Menu.ADD_WORD))
 
-        self.mainMenu_SearchWordButton = QtWidgets.QPushButton("Search Word")
+        self.mainMenu_SearchWordButton = QtWidgets.QPushButton("Search Words")
         self.mainMenu_SearchWordButton.clicked.connect(lambda: self.switchMenu(Menu.SEARCH_WORD))
 
         self.mainMenu_GameButton = QtWidgets.QPushButton("Word Game")
