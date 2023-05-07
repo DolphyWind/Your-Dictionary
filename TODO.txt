@@ -1,2 +1,1 @@
 + Update frontend
-+ Move to Qt6 (Has some UI problems and requires some minor changes)
