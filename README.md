@@ -5,5 +5,5 @@ A dictionary app that helps you when learning new words in a foreign language. Y
 ![Main Menu](./ReadmeImg/main_menu.png "Main Menu")
 ![Add Word Menu](./ReadmeImg/add_word.png "Add Word Menu")
 ![Search Words Menu](./ReadmeImg/search_words.png "Search Words Menu")
-![Surf Words](./ReadmeImg/surf_word.png "Surf Words Menu")
+![Surf Words](./ReadmeImg/surf_words.png "Surf Words Menu")
 ![Word Game](./ReadmeImg/word_game.png "Word Game")
